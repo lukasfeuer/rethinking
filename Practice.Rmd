@@ -1,0 +1,253 @@
+---
+title: "Rethinking | Practice"
+author: "Lukas Feuer"
+output:
+  html_notebook:
+    toc: yes
+    toc_float: yes
+---
+
+# 2
+
+E1: (2)
+
+E2: (3)
+
+E3: (1)
+
+E4: Answered 
+
+M1:
+```{r}
+one <- list(W, W, W)
+two <- list(W, W, W, L)
+three <- list(L, W, W, L, W, W, W)
+
+
+
+# define grid
+p_grid <- seq( from=0 , to=1 , length.out=20 )
+
+# define prior
+prior <- rep( 1 , 20 )
+
+
+# compute likelihood at each value in grid
+likelihood_one <- dbinom( length(which((one == W) == TRUE)) , size=length(one), prob=p_grid )
+likelihood_two <- dbinom( length(which((two == W) == TRUE)) , size=length(two), prob=p_grid )
+likelihood_three <- dbinom( length(which((three == W) == TRUE)) , size=length(three), prob=p_grid )
+
+# compute product of likelihood and prior
+unstd.posterior_one <- likelihood_one * prior
+unstd.posterior_two <- likelihood_two * prior
+unstd.posterior_three <- likelihood_three * prior
+
+
+# standardize the posterior, so it sums to 1
+posterior_one <- unstd.posterior_one / sum(unstd.posterior_one)
+posterior_two <- unstd.posterior_two / sum(unstd.posterior_two)
+posterior_three <- unstd.posterior_three / sum(unstd.posterior_three)
+
+plot( p_grid , posterior_one , type="b" ,
+xlab="probability of water" , ylab="posterior probability" )
+mtext( "one ")
+
+plot( p_grid , posterior_two , type="b" ,
+xlab="probability of water" , ylab="posterior probability" )
+mtext( "two ")
+
+plot( p_grid , posterior_three , type="b" ,
+xlab="probability of water" , ylab="posterior probability" )
+mtext( "three ")
+```
+
+M2:
+```{r}
+one <- list(W, W, W)
+two <- list(W, W, W, L)
+three <- list(L, W, W, L, W, W, W)
+
+
+
+# define grid
+p_grid <- seq( from=0 , to=1 , length.out=20 )
+
+# define prior
+prior <- ifelse( p_grid < 0.5 , 0 , 1)
+
+
+# compute likelihood at each value in grid
+likelihood_one <- dbinom( length(which((one == W) == TRUE)) , size=length(one), prob=p_grid )
+likelihood_two <- dbinom( length(which((two == W) == TRUE)) , size=length(two), prob=p_grid )
+likelihood_three <- dbinom( length(which((three == W) == TRUE)) , size=length(three), prob=p_grid )
+
+# compute product of likelihood and prior
+unstd.posterior_one <- likelihood_one * prior
+unstd.posterior_two <- likelihood_two * prior
+unstd.posterior_three <- likelihood_three * prior
+
+
+# standardize the posterior, so it sums to 1
+posterior_one <- unstd.posterior_one / sum(unstd.posterior_one)
+posterior_two <- unstd.posterior_two / sum(unstd.posterior_two)
+posterior_three <- unstd.posterior_three / sum(unstd.posterior_three)
+
+plot( p_grid , posterior_one , type="b" ,
+xlab="probability of water" , ylab="posterior probability" )
+mtext( "one ")
+
+plot( p_grid , posterior_two , type="b" ,
+xlab="probability of water" , ylab="posterior probability" )
+mtext( "two ")
+
+plot( p_grid , posterior_three , type="b" ,
+xlab="probability of water" , ylab="posterior probability" )
+mtext( "three ")
+```
+
+
+M3:
+pr(E | L) = (0.3 * 0.5) / (0.3 * 0.5 + 1.0 * 0.5) = 0.23
+*Note: Careful to not confuse percent of water vs. land, which is asked here*
+
+
+
+
+# 3
+
+```{r}
+p_grid <- seq( from=0 , to=1 , length.out=1000 )
+prior <- rep( 1 , 1000 )
+likelihood <- dbinom( 6 , size=9 , prob=p_grid )
+posterior <- likelihood * prior
+posterior <- posterior / sum(posterior)
+set.seed(100)
+samples <- sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )
+
+
+# 3E1
+sum( samples < 0.2 ) / 1e4
+
+# 3E2
+sum( samples > 0.8 ) / 1e4
+
+# 3E3
+sum( samples > 0.2 & samples < 0.8 ) / 1e4
+
+# 3E4 & 3E5
+PI( samples , prob=0.6 )
+
+# 3E6
+HPDI( samples, prob = 0.66)
+
+# 3E7
+PI( samples, prob = 0.66)
+
+```
+
+```{r}
+# 3M1
+## 8 W in 15 tosses
+p_grid <- seq( from=0 , to=1 , length.out=1000 )
+prior <- rep( 1 , 1000 )
+likelihood <- dbinom( 8 , size=15 , prob=p_grid )
+posterior <- likelihood * prior
+posterior <- posterior / sum(posterior)
+
+# 3M2
+samples_m <- sample(p_grid, prob=posterior, size = 1e4, replace = TRUE)
+plot(samples_m)
+HPDI(samples_m, prob = 0.90)
+
+
+
+# 3M3 
+z <- rbinom( 1e4 , size=15 , prob=samples_m )
+simplehist(z)
+
+sum(z == 8)/1e4
+
+# 3M4
+###likelihood <- dbinom( 6 , size=9 , prob=posterior )
+z2 <- rbinom( 1e4 , size=9 , prob=samples_m )
+simplehist(z2)
+sum(z2 == 6)/1e4
+```
+
+```{r}
+# 3M5
+## 8 W in 15 tosses
+p_grid <- seq(from = 0, to = 1, length.out = 1000)
+prior <- ifelse(p_grid < 0.5, 0, 1)
+likelihood <- dbinom(8, size = 15, prob = p_grid)
+posterior <- likelihood * prior
+posterior <- posterior / sum(posterior)
+
+# repeat and compare to before
+samples_m <- sample(p_grid, prob=posterior, size = 1e4, replace = TRUE)
+plot(samples_m)
+HPDI(samples_m, prob = 0.90)
+
+
+z <- rbinom( 1e4 , size=15 , prob=samples_m )
+simplehist(z)
+
+sum(z == 8)/1e4
+
+z2 <- rbinom( 1e4 , size=9 , prob=samples_m )
+simplehist(z2)
+sum(z2 == 6)/1e4
+
+```
+
+--> including the more informative prior moves the distribution of simulated samples closer to the "true" proportion of 0.7 
+
+
+```{r}
+# 3M6 ? 
+
+
+
+
+# Hard:
+#(male=1, female=0) „ of officially reported first and second born children in 100 two-child families.“
+
+birth1 <- c(1,0,0,0,1,1,0,1,0,1,0,0,1,1,0,1,1,0,0,0,1,0,0,0,1,0,
+0,0,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,0,1,0,0,1,1,0,1,0,0,0,0,0,0,0,
+1,1,0,1,0,0,1,0,0,0,1,0,0,1,1,1,1,0,1,0,1,1,1,1,1,0,0,1,0,1,1,0,
+1,0,1,1,1,0,1,1,1,1)
+birth2 <- c(0,1,0,1,0,1,1,1,0,0,1,1,1,1,1,0,0,1,1,1,0,0,1,1,1,0,
+1,1,1,0,1,1,1,0,1,0,0,1,1,1,1,0,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,
+1,1,1,0,1,1,0,1,1,0,1,1,1,0,0,0,0,0,0,1,0,0,0,1,1,0,0,1,0,0,1,1,
+0,0,0,1,1,1,0,0,0,0)
+
+boys_total <- sum(birth1) + sum(birth2)
+
+d <- c(birth1, birth2)
+
+# 3H1
+p_grid <- seq(from = 0, to = 1, length.out = 1000)
+prior <- rep( 1 , 1000 )
+likelihood <- dbinom(111, size = 200, prob = p_grid)
+posterior <- likelihood * prior
+posterior <- posterior / sum(posterior)
+
+plot(x = p_grid, y = posterior, type = "l")
+
+p_grid[which.max(posterior)]
+
+
+# 3H2
+w <- sample(p_grid, prob = posterior, size = 1e4, replace = TRUE)
+x <- c(0.50, 0.89, 0.97)
+HPDI(w, prob = x)
+
+
+# 3H3
+ww <- rbinom(1e4, size = 200, prob = w)
+dens(ww)
+abline(v = 111, col = "blue")
+```
+
+too lazy for the rest, looked up the rest on the internet 
+

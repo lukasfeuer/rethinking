@@ -1,10 +1,10 @@
 ---
 title: "Rethinking | Notes"
 author: "Lukas Feuer"
-output: 
+output:
   html_notebook:
-    toc: true
-    toc_float: true
+    toc: yes
+    toc_float: yes
 ---
 
 ***
@@ -21,11 +21,11 @@ Personal notes for *Statistical Rethinking - 2nd Edition* by Richard McElreath
   * Measurement can differ and can be debated. Therefore observers might differ in the opinion, if data is falsifying a model
 * NHST is trying to falsify the null hypothesis, not the actual research hypothesis --> reverse from Karl Poppers original idea 
 * The exponential family of distributions 
-  * contains for example: normal, binomial, poisson distributions 
-  * "loved by Nature" because they are *maximum entropy* distributions 
+  * Contains for example: normal, binomial, poisson distributions 
+  * "Loved by Nature" because they are *maximum entropy* distributions 
 * Problems of the falsification approach:
   * Measurement Error: more often than not, there is great uncertainty, if the measurement, which might render a hypothesis false, is actually correct 
-  * Continuous Hypothesis: usually, hypothesis are not just dichotomous. Instead of "all swans are black" usually they fall more in the range of "a certain percentage of swans is black". These Hs are much harder to falsify 
+  * Continuous Hypothesis: usually, hypothesis are not just dichotomous. Instead of "all swans are black" usually they fall more in the range of "a certain percentage of swans are black". These Hs are much harder to falsify 
 * „So if attempting to mimic falsification is not a generally useful approach to statistical methods, what are we to do? We are to model.“
 * „Nothing in the real world—excepting controversial interpretations of quantum physics—is actually random. We just use randomness to describe our uncertainty in the face of incomplete knowledge.“
 * „I want to convince the reader of something that appears unreasonable: multilevel regression deserves to be the default form of regression. Papers that do not use multilevel models should have to justify not using a multilevel approach.“
@@ -36,8 +36,450 @@ Personal notes for *Statistical Rethinking - 2nd Edition* by Richard McElreath
 
 # 2 | Small Worlds and Large Worlds
 
-* 
+## 2.1 The garden of forking data
+
+* „All statistical modeling has these two frames: the small world of the model itself and the large world we hope to deploy the model in. Navigating between these two worlds remains a central challenge of statistical modeling.“
+* „Bayesian models have some advantages in this regard, as they have reasonable claims to optimality: No alternative model could make better use of the information in the data and support better decisions, assuming the small world is an accurate description of the real world.“
+* „Probability theory in its essential form: counting the ways things can happen. Bayesian inference arises automatically from this perspective“
+* „Heuristics [e.g. as animals use them in everyday live] take adaptive shortcuts and so may outperform a rigorous Bayesian analysis, once costs of information gathering and processing are taken into account. [...] Just don’t think that it [Bayesian analysis] is the only way.“
+* „PRINCIPLE OF INDIFFERENCE: When there is no reason to say that one conjecture is more plausible than another, weigh all of the conjectures equally.“ BUT: „the structure of the model and the scientific context always provide information that allows us to do better than ignorance.“
+* „When we don’t know what caused the data, potential causes that may produce the data in more ways are more plausible.“
+* **∝** means "proportional to"
+* Terms in Probability Therory 
+  * A conjectured proportion of blue marbles, p, is usually called a **PARAMETER** value. It’s just a way of indexing possible explanations of the data.
+  * The relative number of ways that a value p can produce the data is usually called a **LIKELIHOOD**. It is derived by enumerating all the possible data sequences that could have happened and then eliminating those sequences inconsistent with the data.
+  * The prior plausibility of any specific p is usually called the **PRIOR PROBABILITY**.
+  * The new, updated plausibility of any specific p is usually called the **POSTERIOR PROBABILITY**.
+
+
+## 2.2 Building a model
+
+* Chapter introduces the globe-tossing example 
+* Designing a simple Bayesian model benefits from a design loop with three steps.
+  (1) Data story: Motivate the model by narrating how the data might arise.
+  (2) Update: Educate your model by feeding it the data.
+  (3) Evaluate: All statistical models require supervision, leading to model revision.
+* The data story in this case is simply a restatement of the sampling process:
+  (1) The true proportion of water covering the globe is p.
+  (2) A single toss of the globe has a probability p of producing a water (W) observation. It has a probability 1 – p of producing a land (L) observation.
+  (3) Each toss of the globe is independent of the others.
+* „The data story is then translated into a formal probability model.“
+* „There is a widespread superstition that 30 observations are needed before one can use a Gaussian distribution. In non-Bayesian statistical inference, procedures are often justified by the method’s behavior at very large sample sizes, so-called asymptotic behavior. As a result, performance at small samples sizes is questionable.
+In contrast, Bayesian estimates are valid for any sample size. This does not mean that more data isn’t helpful—it certainly is. Rather, the estimates have a clear and valid interpretation, no matter the sample size. But the price for this power is dependency upon the initial plausibilities, the prior. If the prior is a bad one, then the resulting inference will be misleading.“
+* „We could shuffle the order of the observations, as long as six W’s and three L’s remain, and still end up with the same final plausibility curve. That is only true, however, because the model assumes that order is irrelevant to inference. When something is irrelevant to the machine, it won’t affect the inference directly. But it may affect it indirectly, because the data will depend upon order.“
+
+
+## 2.3 Components of the model
+
+* „when someone says, “likelihood,” they will usually mean a distribution function assigned to an observed variable.“
+* Compute the likelihood of the data — six W’s in nine tosses — under any value of p (W L W W W L W L W):
+
+*2.2* 
+```{r}
+# relative number of ways to get six water, holding p at 0.5
+dbinom( 6 , size=9 , prob=0.5 )
+```
+
+* „d” in dbinom stands for density, “r” for random samples and “p” for cumulative probabilities
+* Referenz: „There is a school of Bayesian inference that emphasizes choosing priors based upon the personal beliefs of the analyst **48**. While this SUBJECTIVE BAYESIAN approach thrives in some statistics and philosophy and *economics* programs, *it is rare in the sciences.*“
+* „If you don’t have a strong argument for any particular prior, then try different ones.“
+* „Prior, prior pants on fire. If your goal is to lie with statistics, you’d be a fool to do it with priors, because such a lie would be easily uncovered. Better to use the more opaque machinery of the likelihood. Or better yet—don’t actually take this advice!—massage the data, drop some “outliers,” and otherwise engage in motivated data transformation.“ --> watch out for this in others work!
+* With all the above work, we can now summarize our model: W ~ Binomial(N,p)
+  * Where N = L + W
+  * The unobserved parameter p similarly gets: p~Uniform(0,1) --> p has a uniform—flat—prior over its entire possible range, from zero to one.
+
+
+## 2.4 Making the model go
+
+* Chapter gives an introduction to Bayes' Theorem 
+* Three different conditioning engines, numerical techniques for computing posterior distributions:
+  (1) Grid approximation
+  (2) Quadratic approximation
+  (3) Markov chain Monte Carlo (MCMC)
+* „How you fit the model is part of the model. [...] In even moderately complex problems, however, the details of fitting the model to data force us to recognize that our numerical technique influences our inferences.“
+* „**Grid approximation**: approximation of the continuous posterior distribution by considering only a finite grid of parameter values.“ --> but scales very poorly 
+
+*2.3 - 2.4* 
+```{r}
+# define grid
+p_grid <- seq( from=0 , to=1 , length.out=20 )
+
+# define prior
+prior <- rep( 1 , 20 )
+#prior <- ifelse( p_grid < 0.5 , 0 , 1)
+#prior <- exp( -5*abs( p_grid - 0.5 ) )
+
+
+# compute likelihood at each value in grid
+likelihood <- dbinom( 6 , size=9 , prob=p_grid )
+
+# compute product of likelihood and prior
+unstd.posterior <- likelihood * prior
+
+# standardize the posterior, so it sums to 1
+posterior <- unstd.posterior / sum(unstd.posterior)
+
+plot( p_grid , posterior , type="b" ,
+xlab="probability of water" , ylab="posterior probability" )
+mtext( "20 points ")
+```
+
+* „**QUADRATIC APPROXIMATION**: under quite general conditions, the region near the peak of the posterior distribution will be nearly Gaussian—or “normal”—in shape. This means the posterior distribution can be usefully approximated by a Gaussian distribution. A Gaussian distribution is convenient, because it can be completely described by only two numbers: the location of its center (mean) and its spread (variance).“
+
+*2.6*
+```{r}
+library(rethinking)
+
+globe.qa <- quap(
+  
+alist(
+  W ~ dbinom( W+L ,p) ,# binomial likelihood“
+  p ~ dunif(0,1)# uniform prior
+),
+
+data=list(W=6,L=3) )
+
+# display summary of quadratic approximation
+precis( globe.qa )
+```
+
+* Interpretation of output above: „Assuming the posterior is Gaussian, it is maximized at 0.67, and its standard deviation is 0.16.“
+* Analytical approach with dbeta to ensure the results are correct:
+
+*2.7*
+```{r}
+W <- 6
+L <- 3
+curve( dbeta( x , W+1 , L+1 ) , from=0 , to=1 )
+# quadratic approximation
+curve( dnorm( x , 0.67 , 0.16 ) , lty=2 , add=TRUE )
+```
+
+* „The quadratic approximation, either with a uniform prior or with a lot of data, is often equivalent to a MAXIMUM LIKELIHOOD ESTIMATE (MLE) and its STANDARD ERROR.“
+* Possible Error in computing the Hessian: „attempt to find the standard deviation for a quadratic approximation.“
+* **MARKOV CHAIN MONTE CARLO (MCMC)**: family of conditioning engines capable of handling highly complex models
+* „MCMC estimate of the posterior:
+
+*2.8-2.9*
+```{r}
+n_samples <- 1000
+p <- rep( NA , n_samples )
+p[1] <- 0.5
+W <- 6
+L <- 3
+for ( i in 2:n_samples ) {
+p_new <- rnorm( 1 , p[i-1] , 0.1 )
+if ( p_new < 0 ) p_new <- abs( p_new )
+if ( p_new > 1 ) p_new <- 2 - p_new
+q0 <- dbinom( W , W+L , p[i-1] )
+q1 <- dbinom( W , W+L , p_new )
+p[i] <- ifelse( runif(1) < q1/q0 , p_new , p[i-1] )
+}
+
+dens( p , xlim=c(0,1) )
+curve( dbeta( x , W+1 , L+1 ) , lty=2 , add=TRUE )
+```
+
+
+
+# 3 | Sampling the Imaginary
+
+* Introduces classic example for Bayes' Theorem with medical testing 
+* Using Bayes' Theorem in these cases is NOT uniquely bayesian 
+* Why we sample from the posterior:
+  * „Working with samples transforms a problem in calculus into a problem in data summary“
+  * „It is easier and more intuitive to work with samples from the posterior, than to work with probabilities and integrals directly“
+  * „Some of the most capable methods of computing the posterior produce nothing but samples. Many of these methods are variants of Markov chain Monte Carlo techniques“ --> planning ahead 
+* „We’ll begin to use samples to summarize and simulate model output. The skills you learn here will apply to every problem in the remainder of the book, even though the details of the models and how the samples are produced will vary.“
+* Consider reading again the section: „Rethinking: Why statistics can’t save bad science.“, on why many Hypothesis might be false
+
+
+## 3.1 Sampling from a grid-approximate posterior
+
+* Compute the posterior („posterior here means the probability of p conditional on the data.“)
+
+*3.2-3.5*
+```{r}
+# Compute the Posterior with grid approximation
+p_grid <- seq( from=0 , to=1 , length.out=1000 )
+prob_p <- rep( 1 , 1000 )
+prob_data <- dbinom( 6 , size=9 , prob=p_grid )
+posterior <- prob_data * prob_p
+posterior <- posterior / sum(posterior)
+
+# Sample from Posterior
+samples <- sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )
+plot(samples)
+
+library(rethinking)
+dens( samples )
+```
+
+* „The sample-function randomly pulls values from a vector. The vector in this case is p_grid, the grid of parameter values. The probability of each value is given by posterior“
+
+
+## 3.2 Sampling to summarize
+
+* Summarizing questions can be usefully divided into questions about 
+  (1) intervals of defined boundaries
+  (2) questions about intervals of defined probability mass
+  (3) questions about point estimates
+
+*3.7-3.8*
+```{r}
+sum( samples < 0.5 ) / 1e4
+sum( samples > 0.5 & samples < 0.75 ) / 1e4
+```
+* „So about 17% of the posterior probability is below 0.5. and about 61% [varies every time the script is run] of the posterior probability lies between 0.5 and 0.75.“
+* „When you **sum a vector of TRUE and FALSE**, R counts each TRUE as 1 and each FALSE as 0. So it ends up counting how many TRUE values are in the vector, which is the same as the number of elements in samples that match the logical criterion.“
+* „An interval of posterior probability may be called a CREDIBLE INTERVAL. We’re going to call it a COMPATIBILITY INTERVAL instead“
+* „Posterior intervals report two parameter values that contain between them a specified amount of posterior probability, a probability mass“
+* PERCENTILE INTERVALS (PI): assigns equal probability mass to each "tail" of the interval; this might be a problem for posterior distributions, which are not close to normal, here the PI might „end up excluding the most probable parameter values“
+* HIGHEST POSTERIOR DENSITY INTERVAL (HPDI): 
+  * „The narrowest interval containing the specified probability mass“
+  * „If you want an interval that best represents the parameter values most consistent with the data, then you want the densest of these intervals.“
+
+*3.11-3-13*
+```{r}
+p_grid <- seq( from=0 , to=1 , length.out=1000 )
+prior <- rep(1,1000)
+likelihood <- dbinom( 3 , size=3 , prob=p_grid )
+posterior <- likelihood * prior
+posterior <- posterior / sum(posterior)
+samples <- sample( p_grid , size=1e4 , replace=TRUE , prob=posterior )
+
+plot(posterior)
+
+PI( samples , prob=0.5 )
+
+HPDI( samples , prob=0.5 )
+```
+
+
+* „So the HPDI has some advantages over the PI. But in most cases, these two types of interval are very similar.“
+* „If choice of interval leads to different inferences, then you’d be better off just plotting the entire posterior distribution.“
+* „Rethinking: What do compatibility intervals mean?“ --> on the comparison of confidence and compatibility intervals
+* „The Bayesian parameter estimate is precisely the entire posterior distribution, which is not a single number, but instead a function that maps each unique parameter value onto a plausibility value.“
+* Maximum A Posteriori (MAP) estimate: „parameter value with highest posterior probability“
 
 ```{r}
-plot(cars)
+# MAP (mode) from posterior or samples thereof
+p_grid[ which.max(posterior) ]
+chainmode( samples , adj=0.01 )
+```
+
+* LOSS FUNCTION  
+  * A rule that tells you the cost associated with using any particular point estimate.
+  * As one principled way to go beyond using the entire posterior as the estimate.
+  * „different loss functions imply different point estimates“
+  * „It turns out that the parameter value that maximizes expected winnings (minimizes expected loss) is the median of the posterior distribution“
+  
+```{r}
+loss <- sapply( p_grid , function(d) sum( posterior*abs( d - p_grid ) ) )
+plot(loss)
+p_grid[ which.min(loss) ]
+```
+
+* „Examples [for loss functions] are the absolute loss as above, which leads to the median as the point estimate, and the quadratic loss (d – p)2, which leads to the posterior mean (mean(samples)) as the point estimate. “
+* „The details of the applied context may demand a rather unique loss function.“ --> Hurricane example
+* --> Look up references or other sources to *learn more about loss functions in the future*!
+
+
+## 3.3 Sampling to simulate prediction
+
+* Back to Globe Tossing example
+* „Likelihood functions work in both directions. Given a realized observation, the likelihood function says how plausible the observation is. And given only the parameters, the likelihood defines a distribution of possible observations that we can sample from, to simulate observation. In this way, Bayesian models are always generative, capable of simulating predictions.“
+
+```{r}
+dbinom( 0:2 , size=2 , prob=0.7 )
+```
+
+* „This means that there’s a 9% chance of observing w = 0, a 42% chance of w = 1 , and a 49% chance of w = 2. If you change the value of p [assumed proportion of water], you’ll get a different distribution of implied observations.“
+
+```{r}
+# Simulate Observations
+## two tosses
+rbinom( 10 , size=2 , prob=0.7 )
+
+## nine tosses
+dummy_w <- rbinom( 1e5 , size=9 , prob=0.7 )
+simplehist( dummy_w , xlab="dummy water count" )
+```
+* for first simulation: „1 means “1 water in 2 tosses.“
+* POSTERIOR PREDICTIVE DISTRIBUTION: 
+  * „We’d like to propagate the parameter uncertainty—carry it forward—as we evaluate the implied predictions. All that is required is averaging over the posterior density for p, while computing the predictions. For each possible value of the parameter p, there is an implied distribution of outcomes. So if you were to compute the sampling distribution of outcomes at each value of p, then you could average all of these prediction distributions together, using the posterior probabilities of each value of p“
+  * „The resulting distribution is for predictions, but it incorporates all of the uncertainty embodied in the posterior distribution for the parameter p“
+ * „If you were to use only a single parameter value to compute implied predictions, say the most probable value at the peak of posterior distribution, you’d produce an overconfident distribution of predictions, narrower than the posterior predictive distribution“
+
+```{r}
+# simulate predicted observations for all values of p
+## samples was 3 out of three (see above)
+w <- rbinom( 1e4 , size=9 , prob=samples )
+simplehist(w)
+```
+
+* Author shows implications of correlation between tosses/observations
+  * Looks at longest sequences of events and number of switches (in WWLW etc.)
+  * Differences in actual and simulated data might implicate correlations or means, that assumptions might be false
+
+
+# 4 | Geocentric Models
+
+* The Geocentric Model „is incredibly wrong, yet makes quite good predictions.“
+* „LINEAR REGRESSION is the geocentric model of applied statistics.“ 
+
+
+## 4.1 Why normal distributions are normal
+
+* Simulate a normal distribution from a binomial process (coin flip)
+* Example: coin flip, step back or forward depending on the outcome 
+
+```{r}
+pos <- replicate( 1000 , sum( runif(16,-1,1) ) )
+plot(density(pos))
+
+# Normal by multipilcation (compare:)
+big <- replicate( 10000 , prod( 1 + runif(12,0,0.5) ) )
+small <- replicate( 10000 , prod( 1 + runif(12,0,0.01) ) )
+
+# Normal by log-multiplication (for large deviants)
+log.big <- replicate( 10000 , log(prod(1 + runif(12,0,0.5))) )
+```
+
+* „Any process that adds together random values from the same distribution converges to a normal. “
+* „Measurement errors, variations in growth, and the velocities of molecules all tend towards Gaussian distributions. These processes do this because at their heart, these processes add together fluctuations.“
+* See Reference: „It doesn’t matter what shape the underlying distribution possesses. It could be uniform, like in our example above, or it could be (nearly) anything else.**67**“
+* The justifications for using the Gaussian distribution fall into two broad categories: 
+  (1) ontological: „the world is full of Gaussian distributions, approximately“
+  (2) epistemological: „When all we know or are willing to say about a distribution of measures (measures are continuous values on the real number line) is their mean and variance, then the Gaussian distribution arises as the most consistent with our assumptions.“
+* „If you don’t think the distribution should be Gaussian, then that implies that you know something else that you should tell your golem about, something that would improve inference.“
+* See "Rethinking: Heavy tails" for why the Gaussian is not well suited for some **time series** applications
+* „Probability distributions with only *discrete* outcomes, like the binomial, are called probability mass functions and denoted Pr“
+* „*Continuous* ones like the Gaussian are called probability density functions, denoted with p or just plain old f“
+
+
+## 4.2 A language for describing models
+
+* A standard language
+  (1) First, we recognize a set of variables to work with. Some of these variables are observable. We call these data. Others are unobservable things like rates and averages. We call these parameters.
+  (2) We define each variable either in terms of the other variables or in terms of a probability distribution.
+  (3) The combination of variables and their probability distributions defines a joint generative model that can be used both to simulate hypothetical observations as well as analyze real ones.
+* Stochastic relationships are defined by "~" (probabilistic mapping)
+
+
+## 4.3 Gaussian model of height 
+
+* „There are an infinite number of possible Gaussian distributions. We want our Bayesian machine to consider every possible distribution, each defined by a combination of μ and σ, and rank them by posterior plausibility.“
+* The empirical distribution needn’t be actually Gaussian in order to justify using a Gaussian probability distribution.
+* Working with the Howell1 data
+* NOTE: „technically, a data frame is a special kind of list in R. So you access the individual variables with the usual list “double bracket” notation, like d[[1]] for the first variable or d[[‘x’]] for the variable named x. “
+* Models so far assume that „the values h [height] are independent and identically distributed, abbreviated i.i.d., iid, or IID“ --> see the whole rethinking section --> often iid does not correspond to the real world 
+* „PRIOR PREDICTIVE simulation is an essential part of your modeling. Once you’ve chosen priors for h, μ, and σ, these imply a joint prior distribution of individual heights. By simulating from this distribution, you can see what your choices imply about observable height. “ --> „ simulate heights by sampling from the prior“
+* This Simulation helps to see, what the model assumes before seeing the data; in case of height, with a broader prior for height (e.g. Normal(178, 100)), the model would assume a lot of people with negative height 
+* „The important thing is that your prior not be based on the values in the data, but only on what you know about the data before you see it.“
+
+
+
+```{r}
+library(rethinking)
+data("Howell1")
+d <- Howell1
+str(d)
+precis(d)
+
+# only adults
+d2 <- d[ d$age >= 18 , ]
+
+# „Our goal is to model these values using a Gaussian distribution.“
+dens(d2$height)
+
+# visualiza a prior for the model
+#curve( dnorm( x , 178 , 20 ) , from=100 , to=250 )
+#curve( dunif( x , 0 , 50 ) , from=-10 , to=60 )
+
+# PRIOR PREDICTIVE simulation: simulate heights by sampling from the prior
+sample_mu <- rnorm( 1e4 , 178 , 20 ) # try rnorm( 1e4 , 178 , 100 ) to see why this simulation might be helpful
+sample_sigma <- runif( 1e4 , 0 , 50 )
+prior_h <- rnorm( 1e4 , sample_mu , sample_sigma )
+dens( prior_h )
+```
+
+```{r}
+# This approach will only be used here to brute force 
+mu.list <- seq( from=150, to=160 , length.out=100 )
+sigma.list <- seq( from=7 , to=9 , length.out=100 )
+post <- expand.grid( mu=mu.list , sigma=sigma.list )
+post$LL <- sapply( 1:nrow(post) , function(i) sum(dnorm( d2$height , post$mu[i] , post$sigma[i] , log=TRUE ) ) )
+post$prod <- post$LL + dnorm( post$mu , 178 , 20 , TRUE ) + dunif( post$sigma , 0 , 50 , TRUE )
+post$prob <- exp( post$prod - max(post$prod) )
+contour_xyz( post$mu , post$sigma , post$prob )
+image_xyz( post$mu , post$sigma , post$prob )
+
+# sample from the posterior
+sample.rows <- sample( 1:nrow(post) , size=1e4 , replace=TRUE ,
+prob=post$prob )
+sample.mu <- post$mu[ sample.rows ]
+sample.sigma <- post$sigma[ sample.rows ]
+plot( sample.mu , sample.sigma , cex=0.5 , pch=16 , col=col.alpha(rangi2,0.1) )
+PI( sample.mu )
+PI( sample.sigma )
+```
+
+* Technical: „Adjust the plot to your tastes by playing around with cex (character expansion, the size of the points), pch (plot character), and the 0.1 transparency value.“
+
+
+* Example with Quadratic Approximation (quap)
+```{r}
+library(rethinking)
+data(Howell1)
+d <- Howell1
+d2 <- d[ d$age >= 18 , ]
+
+flist <- alist(
+  height ~ dnorm(mu, sigma),
+  mu ~ dnorm(178, 20),
+  sigma ~ dunif(0, 50)
+)
+
+# optional start values for quap
+start <- list(
+  mu=mean(d2$height),
+  sigma=sd(d2$height)
+)
+
+m4.1 <- quap(flist, data = d2, start = start)
+
+precis(m4.1)
+
+# matrix of variances and covariances for the multidimensional Gaussian 
+vcov(m4.1)
+diag(vcov(m4.1))
+cov2cor(vcov(m4.1))
+
+# samples from multi-dimensional posterior
+post <- extract.samples( m4.1 , n=1e4 )
+precis(post)
+plot(post)
+```
+
+* Interpretation of quap/precis output: 
+  * „These numbers provide Gaussian approximations for each parameter’s marginal distribution. This means the plausibility of each value of μ, after averaging over the plausibilities of each value of σ, is given by a Gaussian distribution with mean 154.6 and standard deviation 0.4.“
+  * „The 5.5% and 94.5% quantiles are percentile interval boundaries, corresponding to an 89% compatibility interval.“
+* „89 [% Interval] is also a prime number, so if someone asks you to justify it, you can stare at them meaningfully and incant, “Because it is prime.” That’s no worse justification than the conventional justification for 95%.“
+* Technical: „when you define a list of formulas, you should use alist [function], so the code isn’t executed“
+* After changing the prior for mu to dnorm(178, 0.1): „Once the golem is certain that the mean is near 178—as the prior insists—then the golem has to estimate σ conditional on that fact. This results in a different posterior for σ, even though all we changed is prior information about the other parameter.“
+* „Instead of sampling single values from a simple Gaussian distribution, we sample vectors of values from a multi-dimensional Gaussian distribution“
+
+
+# 4.4 Linear prediction
+
+* Example: Prediction of height with weight (UV)
+* „Linear model. The mean μ is no longer a parameter to be estimated. Rather, as seen in the second line of the model, μi is constructed from other parameters, α and β, and the observed variable x.“
+* „One way to understand these made-up parameters [α and β] is to think of them as targets of learning. Each parameter is something that must be described in the posterior distribution. So when you want to know something about the data, you ask your golem by inventing a parameter for it. “
+
+```{r}
+library(rethinking)
+data(Howell1); d <- Howell1; d2 <- d[ d$age >= 18 , ]
+plot( d2$height ~ d2$weight )
+
 ```
