@@ -3,6 +3,8 @@ title: "Rethinking | Notes"
 author: "Lukas Feuer"
 output:
   html_notebook:
+    theme: cosmo
+    highlight: pygments
     toc: yes
     toc_float: yes
 ---
@@ -374,9 +376,13 @@ log.big <- replicate( 10000 , log(prod(1 + runif(12,0,0.5))) )
 * Working with the Howell1 data
 * NOTE: „technically, a data frame is a special kind of list in R. So you access the individual variables with the usual list “double bracket” notation, like d[[1]] for the first variable or d[[‘x’]] for the variable named x. “
 * Models so far assume that „the values h [height] are independent and identically distributed, abbreviated i.i.d., iid, or IID“ --> see the whole rethinking section --> often iid does not correspond to the real world 
+* Interpretation of example Priors (human height):
+  * μ ~ Normal(178, 20): prior centered on 178 cm, with 95% of probability between 178 ± 40 cm [(two SD?)] --> assumption by me: means, that the MEAN (not the predicted y in general) lies within that range with this prob.
+  * σ ~ Uniform(0, 50): flat prior that functions just to constrain σ to have positive probability between zero and 50 cm. SD must be positive, upper bound of 50 cm would imply that 95% of individual heights lie within 100 cm of the average height.
+  * assumption by me: could one say, the first mean represents uncertainty about the "actual" mean and the second one represents uncertainty about the distribution of actual heights?
 * „PRIOR PREDICTIVE simulation is an essential part of your modeling. Once you’ve chosen priors for h, μ, and σ, these imply a joint prior distribution of individual heights. By simulating from this distribution, you can see what your choices imply about observable height. “ --> „ simulate heights by sampling from the prior“
 * This Simulation helps to see, what the model assumes before seeing the data; in case of height, with a broader prior for height (e.g. Normal(178, 100)), the model would assume a lot of people with negative height 
-* „The important thing is that your prior not be based on the values in the data, but only on what you know about the data before you see it.“
+* „The important thing is that your prior not be based on the values in the data, but only on what you know about the data **before** you see it.“
 
 
 
@@ -397,7 +403,7 @@ dens(d2$height)
 #curve( dnorm( x , 178 , 20 ) , from=100 , to=250 )
 #curve( dunif( x , 0 , 50 ) , from=-10 , to=60 )
 
-# PRIOR PREDICTIVE simulation: simulate heights by sampling from the prior
+# PRIOR PREDICTIVE simulation: simulate heights by sampling from the priors
 sample_mu <- rnorm( 1e4 , 178 , 20 ) # try rnorm( 1e4 , 178 , 100 ) to see why this simulation might be helpful
 sample_sigma <- runif( 1e4 , 0 , 50 )
 prior_h <- rnorm( 1e4 , sample_mu , sample_sigma )
@@ -429,7 +435,7 @@ PI( sample.sigma )
 
 
 * Example with Quadratic Approximation (quap)
-```{r}
+```{r include=TRUE}
 library(rethinking)
 data(Howell1)
 d <- Howell1
@@ -471,11 +477,9 @@ plot(post)
 * „Instead of sampling single values from a simple Gaussian distribution, we sample vectors of values from a multi-dimensional Gaussian distribution“
 
 
-# 4.4 Linear prediction
+## 4.4 Linear prediction
 
 * Example: Prediction of height with weight (UV)
-* „Linear model. The mean μ is no longer a parameter to be estimated. Rather, as seen in the second line of the model, μi is constructed from other parameters, α and β, and the observed variable x.“
-* „One way to understand these made-up parameters [α and β] is to think of them as targets of learning. Each parameter is something that must be described in the posterior distribution. So when you want to know something about the data, you ask your golem by inventing a parameter for it. “
 
 ```{r}
 library(rethinking)
@@ -483,3 +487,82 @@ data(Howell1); d <- Howell1; d2 <- d[ d$age >= 18 , ]
 plot( d2$height ~ d2$weight )
 
 ```
+
+* „Linear model. The mean μ is no longer a parameter to be estimated. Rather, as seen in the second line of the model, μi is constructed from other parameters, α and β, and the observed variable x.“
+* „One way to understand these made-up parameters [α and β] is to think of them as targets of learning. Each parameter is something that must be described in the posterior distribution. So when you want to know something about the data, you ask your golem by inventing a parameter for it. “
+* Test the implications of the priors with simulation of the prior predictive distribution:
+  * What type of relationship is sensible? (linear, exp...?)
+  * What are realistic minimal and maximal values predicted by the priors (e.g. in height, the simulation should not predict people with negative or zero height and almost no persons with heights over ~270m)
+
+```{r}
+set.seed(2971)
+N <- 100 # 100 lines for 100 pairs of α and β values
+a <- rnorm( N , 178 , 20 )
+b <- rnorm( N , 0 , 10 )
+
+
+plot( NULL , xlim=range(d2$weight) , ylim=c(-100,400),
+ xlab="weight" , ylab="height" )
+abline( h=0 , lty=2 )
+abline( h=272 , lty=1 , lwd=0.5 )
+mtext( "b ~ dnorm(0,10)" )
+xbar <- mean(d2$weight)
+for ( i in 1:N ) curve( a[i] + b[i]*(x - xbar),
+from=min(d2$weight) , to=max(d2$weight) , add=TRUE ,
+col=col.alpha("black",0.2) )
+```
+
+* Restrict to **positive** relations only
+  * see simulation above: there are a lot of nonsensical simulated conjectures (realtion could be absurdly positive or negative)
+  * Defining β as Log-Normal(0,1) means to claim that the logarithm of β has a Normal(0,1) distribution
+  * „If the logarithm of β is normal, then β itself is strictly positive.“
+  * „Log-Normal priors are commonplace. They are an easy way to enforce positive relationships.“
+  
+```{r}
+b <- rlnorm( 1e4 , 0 ,1)
+#dens( b , xlim=c(0,5) , adj=0.1 )
+
+set.seed(2971)
+N <- 100 # 100 lines
+a <- rnorm( N , 178 , 20 )
+b <- rlnorm( N , 0 , 1 )
+```
+
+```{r echo=FALSE}
+plot( NULL , xlim=range(d2$weight) , ylim=c(-100,400),
+ xlab="weight" , ylab="height" )
+abline( h=0 , lty=2 )
+abline( h=272 , lty=1 , lwd=0.5 )
+mtext( "b ~ dnorm(0,10)" )
+xbar <- mean(d2$weight)
+for ( i in 1:N ) curve( a[i] + b[i]*(x - xbar),
+from=min(d2$weight) , to=max(d2$weight) , add=TRUE ,
+col=col.alpha("black",0.2) )
+```
+
+* It is okay to try out different priors and compare how they are producing different inferences as long as this is done BEFORE seeing the actual data 
+* Getting the Posterior Approximation:
+
+```{r}
+library(rethinking)
+data(Howell1); d <- Howell1; d2 <- d[ d$age >= 18 , ]
+
+xbar <- mean(d2$weight)
+
+# fit model
+m4.3 <- quap(
+  alist(
+    height ~ dnorm( mu , sigma ) ,
+    mu <- a + b*( weight - xbar ) ,
+    a ~ dnorm( 178 , 20 ) ,
+    b ~ dlnorm( 0 , 1 ) ,
+    sigma ~ dunif( 0 , 50 )
+  ) , data=d2 )
+
+precis(m4.3)
+```
+
+* „Since parameters are uncertain, everything that depends upon them is also uncertain. This includes statistics like μ, as well as model-based predictions, measures of fit, and everything else that uses parameters. “
+* Concerning LOGARITHMS: „You can usefully think of y = log(x) as assigning to y the order of magnitude of x. The function x = exp(y) is the reverse, turning a magnitude into a value. “ --> see Overthinking Box for more details!
+* „Posterior probabilities of parameter values describe the relative compatibility of different states of the world with the data, according to the model. These are small world (Chapter 2) numbers.“
+* 
