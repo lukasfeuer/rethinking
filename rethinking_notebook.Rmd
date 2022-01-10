@@ -212,7 +212,6 @@ posterior <- posterior / sum(posterior)
 # Sample from Posterior
 samples <- sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )
 plot(samples)
-
 library(rethinking)
 dens( samples )
 ```
@@ -260,7 +259,7 @@ HPDI( samples , prob=0.5 )
 
 * „So the HPDI has some advantages over the PI. But in most cases, these two types of interval are very similar.“
 * „If choice of interval leads to different inferences, then you’d be better off just plotting the entire posterior distribution.“
-* „Rethinking: What do compatibility intervals mean?“ --> on the comparison of confidence and compatibility intervals
+* „Rethinking: What do compatibility intervals mean?“ --> on the comparison of confidence intervals and compatibility intervals
 * „The Bayesian parameter estimate is precisely the entire posterior distribution, which is not a single number, but instead a function that maps each unique parameter value onto a plausibility value.“
 * Maximum A Posteriori (MAP) estimate: „parameter value with highest posterior probability“
 
@@ -284,7 +283,7 @@ p_grid[ which.min(loss) ]
 
 * „Examples [for loss functions] are the absolute loss as above, which leads to the median as the point estimate, and the quadratic loss (d – p)2, which leads to the posterior mean (mean(samples)) as the point estimate. “
 * „The details of the applied context may demand a rather unique loss function.“ --> Hurricane example
-* --> Look up references or other sources to *learn more about loss functions in the future*!
+* --> Look up references or other sources to **learn more about loss functions in the future**!
 
 
 ## 3.3 Sampling to simulate prediction
@@ -380,7 +379,7 @@ log.big <- replicate( 10000 , log(prod(1 + runif(12,0,0.5))) )
   * μ ~ Normal(178, 20): prior centered on 178 cm, with 95% of probability between 178 ± 40 cm [(two SD?)] --> assumption by me: means, that the MEAN (not the predicted y in general) lies within that range with this prob.
   * σ ~ Uniform(0, 50): flat prior that functions just to constrain σ to have positive probability between zero and 50 cm. SD must be positive, upper bound of 50 cm would imply that 95% of individual heights lie within 100 cm of the average height.
   * assumption by me: could one say, the first mean represents uncertainty about the "actual" mean and the second one represents uncertainty about the distribution of actual heights?
-* „PRIOR PREDICTIVE simulation is an essential part of your modeling. Once you’ve chosen priors for h, μ, and σ, these imply a joint prior distribution of individual heights. By simulating from this distribution, you can see what your choices imply about observable height. “ --> „ simulate heights by sampling from the prior“
+* „**PRIOR PREDICTIVE simulation** is an essential part of your modeling. Once you’ve chosen priors for h, μ, and σ, these imply a joint prior distribution of individual heights. By simulating from this distribution, you can see what your choices imply about observable height. “ --> „ simulate heights by sampling from the prior“
 * This Simulation helps to see, what the model assumes before seeing the data; in case of height, with a broader prior for height (e.g. Normal(178, 100)), the model would assume a lot of people with negative height 
 * „The important thing is that your prior not be based on the values in the data, but only on what you know about the data **before** you see it.“
 
@@ -489,7 +488,7 @@ plot( d2$height ~ d2$weight )
 ```
 
 * „Linear model. The mean μ is no longer a parameter to be estimated. Rather, as seen in the second line of the model, μi is constructed from other parameters, α and β, and the observed variable x.“
-* „One way to understand these made-up parameters [α and β] is to think of them as targets of learning. Each parameter is something that must be described in the posterior distribution. So when you want to know something about the data, you ask your golem by inventing a parameter for it. “
+* „One way to understand these made-up parameters [α and β] is to think of them as **targets of learning**. Each parameter is something that must be described in the posterior distribution. So when you want to know something about the data, you ask your golem by inventing a parameter for it. “
 * Test the implications of the priors with simulation of the prior predictive distribution:
   * What type of relationship is sensible? (linear, exp...?)
   * What are realistic minimal and maximal values predicted by the priors (e.g. in height, the simulation should not predict people with negative or zero height and almost no persons with heights over ~270m)
@@ -519,6 +518,7 @@ col=col.alpha("black",0.2) )
   * „Log-Normal priors are commonplace. They are an easy way to enforce positive relationships.“
   
 ```{r}
+# siehe ?rlnorm
 b <- rlnorm( 1e4 , 0 ,1)
 #dens( b , xlim=c(0,5) , adj=0.1 )
 
@@ -540,7 +540,12 @@ from=min(d2$weight) , to=max(d2$weight) , add=TRUE ,
 col=col.alpha("black",0.2) )
 ```
 
-* It is okay to try out different priors and compare how they are producing different inferences as long as this is done BEFORE seeing the actual data 
+* It is okay to try out different priors and compare how they are producing different inferences as long as this is done **BEFORE** seeing the actual data
+* „choose priors conditional on pre-data knowledge of the variables—their constraints, ranges, and theoretical relationships.“
+* Everything that depends upon parameters has a posterior distribution.Since parameters are uncertain, everything that depends upon them is also uncertain. This includes statistics like μ, as well as model-based predictions, measures of fit, and everything else that uses parameters. By working with samples from the posterior, all you have to do to account for posterior uncertainty in any quantity is to compute that quantity for each sample from the posterior. The resulting quantities, one for each posterior sample, will approximate the quantity’s posterior distribution.
+* Concerning LOGARITHMS: „You can usefully think of y = log(x) as assigning to y the order of magnitude of x. The function x = exp(y) is the reverse, turning a magnitude into a value. “ --> see Overthinking Box for more details!
+* What do Parameters mean? „Posterior probabilities of parameter values describe the relative compatibility of different states of the world with the data, according to the model. These are small world (Chapter 2) numbers.“
+
 * Getting the Posterior Approximation:
 
 ```{r}
@@ -560,9 +565,180 @@ m4.3 <- quap(
   ) , data=d2 )
 
 precis(m4.3)
+
+# variance-covariance matrix
+round( vcov( m4.3 ) , 3 )
+
+pairs(m4.3)
 ```
 
-* „Since parameters are uncertain, everything that depends upon them is also uncertain. This includes statistics like μ, as well as model-based predictions, measures of fit, and everything else that uses parameters. “
-* Concerning LOGARITHMS: „You can usefully think of y = log(x) as assigning to y the order of magnitude of x. The function x = exp(y) is the reverse, turning a magnitude into a value. “ --> see Overthinking Box for more details!
-* „Posterior probabilities of parameter values describe the relative compatibility of different states of the world with the data, according to the model. These are small world (Chapter 2) numbers.“
-* 
+* Very little covariation among the parameters in this case. Lack of covariance among the parameters results from CENTERING. --> see later
+* It’s almost always much more useful to plot the posterior inference against the data:
+```{r}
+# Actual data and only the mean slope of b and mean intercept of a
+plot( height ~ weight , data=d2 , col=rangi2 )
+post <- extract.samples( m4.3 )
+a_map <- mean(post$a)
+b_map <- mean(post$b)
+curve( a_map + b_map*(x - xbar) , add=TRUE )
+```
+```{r}
+# INCLUDE MORE LINES to visualize scatter
+#post <- extract.samples( m4.3 )
+#post[1:5,]
+# The following code extracts the first 10 cases and re-estimates the model
+N <- 30
+dN <- d2[ 1:N , ]
+mN <- quap(
+ alist(
+  height ~ dnorm( mu , sigma ) ,
+  mu <- a + b*( weight - mean(weight) ) ,
+  a ~ dnorm( 178 , 20 ) ,
+  b ~ dlnorm( 0 , 1 ) ,
+  sigma ~ dunif( 0 , 50 )
+ ) , data=dN )
+
+# extract 20 samples from the posterior
+post <- extract.samples( mN , n=20 )
+# display raw data and sample size
+plot( dN$weight , dN$height ,
+ xlim=range(d2$weight) , ylim=range(d2$height) ,
+ col=rangi2 , xlab="weight" , ylab="height" )
+mtext(concat("N = ",N))
+# plot the lines, with transparency
+for ( i in 1:20 )
+ curve( post$a[i] + post$b[i]*(x-mean(dN$weight)) ,
+  col=col.alpha("black",0.3) , add=TRUE )
+```
+* compute any arbitrary interval you like, using the underlying cloud of regression lines embodied in the posterior distribution.
+* **link** function: take your quap approximation, sample from the posterior distribution, and then compute μ for each case in the data and sample from the posterior distribution.
+```{r}
+# define sequence of weights to compute predictions for
+# these values will be on the horizontal axis
+weight.seq <- seq( from=25 , to=70 , by=1 )
+
+# use link to compute mu
+# for each sample from posterior
+# and for each weight in weight.seq
+mu <- link( m4.3 , data=data.frame(weight=weight.seq) )
+
+# use type=“n” to hide raw data
+plot( height ~ weight , d2 , type="n" )
+
+# loop over samples and plot each mu value
+for ( i in 1:100 )
+points( weight.seq , mu[i,] , pch=16 , col=col.alpha(rangi2,0.1) )
+
+# summarize the distribution of mu
+mu.mean <- apply( mu , 2 , mean )
+mu.PI <- apply( mu , 2 , PI , prob=0.89 )
+
+# plot raw data
+# fading out points to make line and interval more visible
+plot( height ~ weight , data=d2 , col=col.alpha(rangi2,0.5) )
+ 
+# plot the MAP line, aka the mean mu for each weight
+lines( weight.seq , mu.mean )
+ 
+# plot a shaded region for 89% PI
+shade( mu.PI , weight.seq )
+```
+
+* **Interpretation** of the Plot: Conditional on the assumption that height and weight are related by a straight line, then this is the most plausible line, and these are its plausible bounds. --> ONLY visualizes uncertainty in μ, not sigma!
+* Technical: Read **apply**(mu,2,mean) as compute the mean of each column (dimension “2”) of the *matrix* mu.
+* Generating predictions and intervals from the posterior of a fit model.
+  (1) Use link to generate distributions of posterior values for μ --> pass it a list of new horizontal axis values to plot posterior predictions across.
+  (2) Use summary functions like mean or PI to find averages and lower and upper bounds of μ for each value of the predictor variable.
+  (3) Plotting functions like lines and shade to draw the lines and intervals.
+* Generating an 89% prediction interval for actual heights, not just the average height, μ:
+    * For any unique weight value, you sample from a Gaussian distribution with the correct mean μ for that weight, using the correct value of σ sampled from the same posterior distribution.
+    * **sim** function does this
+```{r}
+sim.height <- sim( m4.3 , data=list(weight=weight.seq) )
+str(sim.height)
+# matrix is much like the earlier one, mu, but it contains simulated heights, not distributions of plausible average height, μ.
+
+height.PI <- apply( sim.height , 2 , PI , prob=0.89 )
+
+mu.HPDI <- apply( mu , 2 , HPDI , prob=0.89 ) # was missing in the book, seems to work
+
+# plot raw data
+plot( height ~ weight , d2 , col=col.alpha(rangi2,0.5) )
+
+# draw MAP line
+lines( weight.seq , mu.mean )
+
+# draw HPDI region for line
+shade( mu.HPDI , weight.seq )
+
+# draw PI region for simulated heights
+shade( height.PI , weight.seq )
+```
+* The narrow shaded interval around the line is the distribution of μ.The wide shaded region in the figure represents the area within which the model expects to find 89% of actual heights in the population, at each weight.
+
+
+## 4.5 Curves from Lines
+
+### 4.5.1 Polinomial Regression
+
+* Uses powers of a variable—squares and cubes—as extra predictors.
+* Fitting these models to data is easy. Interpreting them can be hard
+* The first thing to do is to **STANDARDIZE** the predictor variable.
+* When predictor variables have very large values in them, there are sometimes numerical glitches
+* The confusing issue here is assigning a prior for β2, the parameter on the squared value of x. Unlike β1, we don’t want a positive constraint.
+```{r}
+library(rethinking)
+data(Howell1)
+d <- Howell1
+#plot( height ~ weight , d )
+
+# pre-calculate the variables to save computing-time
+d$weight_s <- ( d$weight - mean(d$weight) )/sd(d$weight)
+d$weight_s2 <- d$weight_s^2
+
+m4.5 <- quap(
+ alist(
+  height ~ dnorm( mu , sigma ) ,
+  mu <- a + b1*weight_s + b2*weight_s2 ,
+  a ~ dnorm( 178 , 20 ) ,
+  b1 ~ dlnorm( 0 , 1) ,
+  b2 ~ dnorm( 0 , 1 ) ,
+  sigma ~ dunif( 0 , 50 )
+ ) , data=d )
+
+precis(m4.5)
+
+# calculate the mean relationship and the 89% intervals of the mean and the predictions:
+weight.seq <- seq( from=-2.2 , to=2 , length.out=30 )
+pred_dat <- list( weight_s=weight.seq , weight_s2=weight.seq^2 )
+mu <- link( m4.5 , data=pred_dat )
+mu.mean <- apply( mu , 2 , mean )
+mu.PI <- apply( mu , 2 , PI , prob=0.89 )
+sim.height <- sim( m4.5 , data=pred_dat )
+height.PI <- apply( sim.height , 2 , PI , prob=0.89 )
+
+# Plotting 
+plot( height ~ weight_s , d , col=col.alpha(rangi2,0.5) )
+lines( weight.seq , mu.mean )
+shade( mu.PI , weight.seq )
+shade( height.PI , weight.seq )
+
+# convert the axis from standard to normal units:
+#plot( height ~ weight_s , d , col=col.alpha(rangi2,0.5) , xaxt="n" )
+#at <- c(-2,-1,0,1,2)
+#labels <- at*sd(d$weight) + mean(d$weight)
+#axis( side=1 , at=at , labels=round(labels,1) )
+```
+* α (a) is still the intercept, so it tells us the expected value of height when weight is at its mean value. But it is no longer equal to the mean height in the sample, since there is no guarantee it should in a polynomial regression.
+* β1 and β2 parameters are the linear and square components of the curve
+* For a higher-order polynomial regression, a cubic regression on weigh just add the cubic term to the linear model and add the respective prior (see respective Chapter)
+* This cubic curve is even more flexible than the parabola, so it fits the data even better 
+* Problems: better fit does not equal a better model and model contains no information about causal relationship (in this case, biological information)
+* See "Rethinking: Linear, additive, funky" for the meaning of "linear model"
+
+
+### 4.5.2 Splines 
+
+
+
+

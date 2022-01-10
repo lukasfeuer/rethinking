@@ -1,0 +1,63 @@
+---
+title: "Rethinking | Take 3"
+author: "Lukas Feuer"
+output:
+  html_notebook:
+    theme: cosmo
+    highlight: pygments
+    toc: yes
+    toc_float: yes
+---
+
+This is my third attempt at completing the full course. I am now waching the excellent companion lectures by Richard Mecelreath on [YouTube](https://youtu.be/guTdrfycW2Q?t=1301). My plan is to code along, starting with lecture 2 and take notes (most likely when I am about to go bejond my second attempt in the book)
+
+**The Plan** is to finally get through the full course, read the book later if needed
+
+# 02 | Globe Tossing
+
+* No point estimates
+* Intervalls are only for brief reporting, not for error control 
+
+```{r Globe tossing example}
+# Globe tossing example | Grid Approximation
+
+p_grid = seq(0, 1, len = 1000)
+
+prob_p <- rep(1, 1000)
+
+prob_data <- dbinom(6, 9, prob = p_grid)
+
+poster  <- prob_data * prob_p
+poster <- poster/sum(poster)
+```
+
+* Samples from posterior to summarize 
+* Creating the Posterior Predictive --> explanation and visual around 1:00:00 (2022, Lecture 02) 
+* Posterior Predicitve (whole distribution) first goal to report 
+
+```{r Sample from the Posterior}
+samples <- sample(p_grid, prob = poster, size = 1e4, replace = TRUE)
+
+#library(rethinking)
+#plot(samples)
+#dens(samples)
+
+w <- rbinom(1e4, 9, prob = samples)
+
+# POSTERIOR Predictive (normaization missing?)
+hist(w)
+```
+
+* **PRIOR Predicitve** works the same but with samples from the prior (before seeing the data)
+* Very useful in complex models if we have to choose priors and don't understand them in isolation 
+* Makes it understandable, what Priors "mean" --> choose them knowingly, not by default 
+
+
+# 03 | Geocentric Models
+
+
+
+```{r}
+
+```
+
