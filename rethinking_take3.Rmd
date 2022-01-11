@@ -55,9 +55,50 @@ hist(w)
 
 # 03 | Geocentric Models
 
+* Intro to Linear Regression
+* Basics of the Gaussian / Normal Distribution 
+* **data distribution** as a better term for "likelihood" (non-bayesian term)
 
+## Workflow of Drawing the Owl 
+
+(1) Question/goal
+ Some Relationship between Heigth and Weight 
+ 
+```{r }
+library(rethinking)
+data(Howell1)
+d <- Howell1[Howell1$age>=18, ]
+plot(d$height, d$weight)
+```
+
+(2) Scientific Model
+  How does height influence weight 
+  Weight is some function of height: H --> W (causal with ONE direction)
+  W = f(H) -> Weight is some function of Height
+
+Generative Models
+  (1) Dynamic Model: Simulation of growth from birth (more elegant solution, but not done in this example) --> Incremental growth 
+  (2) Static Model: Changes of height result in changes of weight but no mechanism
+
+* In linear Regression, the line does not tell where the OBSERVED values are, but where the mean expected values will be
 
 ```{r}
+# Simulate Individuals with the linear model (forward simulation)
+alpha <- 0
+beta <- 0.5
+sigma <- 5
+n_individuals <- 100
 
+# Sampling some heights
+H <- runif(n_individuals, 130, 170)
+
+# Define the linear relationship (see plot(H, mu))
+mu <- alpha + beta*H
+
+# Simulate Weights from the normal distribution
+W <- rnorm(n_individuals, mu, sigma)
+
+# synthetic data:
+plot(H, W)
 ```
 
