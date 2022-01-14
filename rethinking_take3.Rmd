@@ -32,7 +32,7 @@ poster <- poster/sum(poster)
 ```
 
 * Samples from posterior to summarize 
-* Creating the Posterior Predictive --> explanation and visual around 1:00:00 (2022, Lecture 02) 
+* Creating the Posterior Predictive &#8594; explanation and visual around 1:00:00 (2022, Lecture 02) 
 * Posterior Predicitve (whole distribution) first goal to report 
 
 ```{r Sample from the Posterior}
@@ -50,7 +50,7 @@ hist(w)
 
 * **PRIOR Predicitve** works the same but with samples from the prior (before seeing the data)
 * Very useful in complex models if we have to choose priors and don't understand them in isolation 
-* Makes it understandable, what Priors "mean" --> choose them knowingly, not by default 
+* Makes it understandable, what Priors "mean" &#8594; choose them knowingly, not by default 
 
 
 # 03 | Geocentric Models
@@ -73,16 +73,16 @@ plot(d$height, d$weight)
 
 (2) Scientific Model
   How does height influence weight 
-  Weight is some function of height: H --> W (causal with ONE direction)
-  W = f(H) -> Weight is some function of Height
+  Weight is some function of height: H &#8594; W (causal with ONE direction)
+  W = f(H) &#8594; Weight is some function of Height
 
 Generative Models
-  (1) Dynamic Model: Simulation of growth from birth (more elegant solution, but not done in this example) --> Incremental growth 
+  (1) Dynamic Model: Simulation of growth from birth (more elegant solution, but not done in this example) &#8594; Incremental growth 
   (2) Static Model: Changes of height result in changes of weight but no mechanism
 
 * In linear Regression, the line does not tell where the OBSERVED values are, but where the mean expected values will be
 
-```{r}
+```{r echo=TRUE}
 # Simulate Individuals with the linear model (forward simulation)
 alpha <- 0
 beta <- 0.5
@@ -102,3 +102,166 @@ W <- rnorm(n_individuals, mu, sigma)
 plot(H, W)
 ```
 
+
+(3) Statistical Model
+
+* Differences to Scientific Model (2):
+    * Priors 
+    * Parameter Values are unknown
+* Sigma is a "scale parameter"
+    * Their value streches some distibution     
+    * Value is always positive &#8594; prior z.B. uniform
+
+Sampling the prior distribution: 
+    
+```{r}
+library(rethinking)
+data(Howell1)
+d <- Howell1[Howell1$age>=18, ]
+
+n_samples <- 10
+alpha <- rnorm(n_samples, 0, 1)
+beta <- rnorm(n_samples, 0, 1)
+
+#plot(NULL, xlim = c(-2, 2), ylim = c(-2, 2),
+#     xlab = "x", ylab = "y")
+#for (i in 1:n_samples) {
+#  abline(alpha[i], beta[i], lwd = 4, col = 2)
+#}
+```
+&#8594; after that we could add more data points and see, that the lines get more and more confined
+
+Structure of statistical model similar to generative model BUT:
+
+  * useful to rescale variables &#8594; changes meaning: e.g. if we rescale *height*, alpha is now the expected weight, if a person is of **average** height
+  * must think about priors 
+    * alpha (with the new meaning in mind): for example look up the average weight in africa and use it for the prior &#8594; a ~ normal(60, 10) &#8594; 10 is a very large SD 
+    * beta (always consider the unit: here kg per centimeter): b ~ normal(0, 10) means that we are neutral (relationship can be positive or negative, 10 is very wide SD)
+    * sigma: uniform(0, 10) &#8594; SD of 10 is a variance of 100 (this would mean a huge spread on weight for any given heigth)
+
+Sampled regression lines (before estimation)
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+n <- 10
+alpha = rnorm(n, 60, 10)
+beta = rnorm(n, 0, 10)
+
+Hbar <- 150
+Hseq <- seq(from = 130, to = 170, len = 30)
+plot(NULL, xlim = c(130, 170), ylim = c(10, 100))
+for (i in 1:n) {
+  lines(Hseq, alpha[i] + beta[i]*(Hseq-Hbar), lwd = 3, col = 2)
+}
+# lines are all over the place --> because beta can be negative --> makes no sense
+# therefore constrain beta to positive: LogNormal --> if you took the log of all 
+# the values in the distribution, the distribution would be normal 
+# --> LogNormal(0, 1) --> numbers refer to the distribution after the log 
+beta = rlnorm(n, 0, 1)
+
+plot(NULL, xlim = c(130, 170), ylim = c(10, 100))
+for (i in 1:n) {
+  lines(Hseq, alpha[i] + beta[i]*(Hseq-Hbar), lwd = 3, col = 2)
+}
+```
+
+Priors
+* There is no "right" prior
+* Statistical and/or scientific argument needed
+* Justified with information **outside** the data
+* Priors matter less in simple models like the example above **BUT** they matter more e.g. in multilevel models &#8594; in these models the priors are learned from the data itself
+* for the model above the Posterior is Pr(a,b,sigma | W, H)
+
+
+Quadratic approximation 
+&#8594; many posterior distributions are approximately Gaussian 
+&#8594; Laplace is the most influential person in bayesian Statistics &#8594; should maybe called laplacian Statistics
+
+(4 & 5) Validate Model & Analyze Data
+
+* Take data from the previous simulation (scientific model, step 2) and put it into the statistical model
+* **Simulation based Calibration** We know the mechanics of the scientific model &#8594; if it is consistent with the data, the statistical model should recover these values &#8594; later: deep dive simulation-based calibration 
+
+Validate with simulation
+```{r echo=TRUE}
+# first step: simulate some data from the model
+alpha <- 70
+beta <- 0.5
+sigma <- 5
+n_individuals <- 100
+H <- runif(n_individuals, 130, 170)
+mu <- alpha + beta * (H - mean(H))
+W <- rnorm(n_individuals, mu, sigma)
+
+dat <- list(H = H, W = W, Hbar = mean(H))
+
+# quadratic approximation with the simulated data
+m_validate <- quap(
+  alist(
+    W ~ dnorm(mu, sigma),
+    mu <- a + b * (H - Hbar),
+    a ~ dnorm(60, 10),
+    # keep in mind meaning for scaled values of H
+    b ~ dlnorm(0, 1),
+    sigma ~ dunif(0, 10)
+), data = dat)
+
+precis(m_validate)
+# conclusion: we can get very close to the original simulated data
+# with simulation-based calibation, this step would be repeated with a lot of different values
+```
+
+Repeat with the real data
+```{r}
+data(Howell1)
+d <- Howell1[Howell1$age >= 18,]
+
+dat <- list(W = d$weight,
+            H = d$height,
+            Hbar = mean(d$height))
+
+m_adults <- quap(alist(
+  W ~ dnorm(mu, sigma),
+  mu <- a + b * (H - Hbar),
+  a ~ dnorm(60, 10),
+  b ~ dlnorm(0, 1),
+  sigma ~ dunif(0, 10)
+),
+data = dat)
+
+precis(m_adults)
+```
+
+**First Law of Statistical Interpretation**:
+> The parameters are not independent of one another and cannot always be independently interpreted
+
+&#8594; Covariation between parameter values is very common 
+&#8594; Instead: Push out posterior predictions and describe/interpret those (analogous to the globe tossing example)
+
+
+## Posterior predictive distribution
+
+(1) Plot the sample
+(2) Plot the posterior mean
+(3) Plot uncertainty of the mean
+(4) Plot uncertainty of predictions
+
+```{r}
+#plot( height ~ weight , data=d , col=col.alpha(rangi2,0.5) )
+
+# maybe interesting in the future: Lecture 03; 1:16:00 for more code to actually create visualization
+```
+
+
+# 04 | Categories, Curves & Splines
+
+```{r}
+data("Howell1")
+d$male <- as.factor(d$male)
+ggplot(d)+geom_point(aes(d$height, d$weight, color = d$male))
+```
+
+Research Question: influence of height and sex on weight 
+* how are height, weight and sex *causally* related?
+* how are height, weight and sex *statistically* related?
+&#8594; Causes aren't in the data
+
+&#8594; weiter ab 8 Minuten
