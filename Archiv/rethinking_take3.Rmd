@@ -231,6 +231,7 @@ precis(m_adults)
 ```
 
 **First Law of Statistical Interpretation**:
+
 > The parameters are not independent of one another and cannot always be independently interpreted
 
 &#8594; Covariation between parameter values is very common 
@@ -259,9 +260,10 @@ d$male <- as.factor(d$male)
 ggplot(d)+geom_point(aes(d$height, d$weight, color = d$male))
 ```
 
-Research Question: influence of height and sex on weight 
+Research Question: influence of height and sex on weight:
+
 * how are height, weight and sex *causally* related?
 * how are height, weight and sex *statistically* related?
-&#8594; Causes aren't in the data
+&#8594; Causes aren't in the data &#8594; starting around 8 minutes: how to think about the direction of effects 
 
 &#8594; weiter ab 8 Minuten
