@@ -1,4 +1,4 @@
-Statistical Rethinking
+# Statistical Rethinking - Notizen
 
 ## Kapitel 2 
 
@@ -56,7 +56,7 @@ Statistical Rethinking
 	- Tilde `~` definiert einen stochastischen Zusammenhang zwischen einer Variablen/Parameter und einer Verteilungsfunktion 
 	- Deterministischer Zusammenhang definiert durch `=`
 - Gauss-Modell für Köpergröße:
-	- likelihood: h~i~ ~ Normal(µ, σ)
+	- likelihood: h<sub>i</sub> ~ Normal(µ, σ)
 	- µ prior: µ ~ Normal(178, 20)
 	- σ prior: σ ~ Uniform(0,50)
 - **Prior Predictive Simulation** ist ein essenzieller Teil des Modellierens. Die Simulation zeigt die Implikationen der gewählten Priors (hier z.B. für die Verteilung von Körpergrößen). Dabei werden jeweils Zufallsstichproben aus den beiden Prior-Verteilungen oben gezogen und in die Likelihood eingefügt, daraus ergibt sich die Simulationen der erwarteten Verteilung von Körpergrößen. Diese Verteilung selbst muss nicht "gaussian" sein, da sie keine empirische Annahme darstellt sondern lediglich die erwartete Plausibilität verschiedener Körpergrößen, bevor die Daten bekannt sind
@@ -71,8 +71,8 @@ Statistical Rethinking
 - Stichproben aus der multivariaten Posterior werden nicht als Einzelwerte gezogen sondern als Vektoren mehrer Werte gleichzeitig
 - Lineare Vorhersagen: µ wird nun deterministisch durch zwei neue Parameter erklärt, α und β, mit denen µ systematisch variiert werden kann über die Daten hinweg
 - Lineares Regressionsmodell für Körpergröße mit Gewicht als Prediktor:
-	h~i~ ~ Normal(µ~i~, σ)
-	µ~i~ = α + β(x~i~ - x̄)
+	h<sub>i</sub> ~ Normal(µ<sub>i</sub>, σ)
+	µ<sub>i</sub> = α + β(x<sub>i</sub> - x̄)
 	α ~ Normal(178, 20)
 	β ~ Normal(0, 10)
 	σ ~ Uniform(0, 50)
