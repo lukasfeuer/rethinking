@@ -71,14 +71,23 @@
 - Stichproben aus der multivariaten Posterior werden nicht als Einzelwerte gezogen sondern als Vektoren mehrer Werte gleichzeitig
 - Lineare Vorhersagen: µ wird nun deterministisch durch zwei neue Parameter erklärt, α und β, mit denen µ systematisch variiert werden kann über die Daten hinweg
 - Lineares Regressionsmodell für Körpergröße mit Gewicht als Prediktor:
-	h<sub>i</sub> ~ Normal(µ<sub>i</sub>, σ)
-	µ<sub>i</sub> = α + β(x<sub>i</sub> - x̄)
-	α ~ Normal(178, 20)
-	β ~ Normal(0, 10)
-	σ ~ Uniform(0, 50)
-- 
+	- h<sub>i</sub> ~ Normal(µ<sub>i</sub>, σ)
+	- µ<sub>i</sub> = α + β(x<sub>i</sub> - x̄)
+	- α ~ Normal(178, 20)
+	- β ~ Normal(0, 10)
+	- σ ~ Uniform(0, 50)
+- Anstatt α und β abstrakt als Intercept und Slope zu bezeichnen, besser die konkrete Bedeutung verinnerlichen 
+	- α: Erwartungswert von h, wenn x = x̄ (da dann µ = α)
+	- β: Erwartete Änderung in h, wenn x sich um eine Einheit verändert 
+- **Log-Normal Prior**
+	- Der Prior für β im oberen Modell ist problematisch. Eine Simulation von möglichen Regressionslinien zeigt, dass laut modell auch ein (unmöglicher) negativer Zusammenhang zwischen den Variablen möglich wäre. Um den Zusammenhang positiv festzulegen, wird ein Log-Normal Prior verwendet
+	- β als Log-Normal(0, 1) zu definieren bedeutet, dass der Logarithmus von β normalverteilt ist mit Normal(0, 1)
+	- β ist strikt positiv, da exp(x) > 0 für alle reellen Zahlen 
+- Es gibt keinen einzig "korrekten" Prior für eine bestimmte Analyse. Mit Priors kann ein unterschiedlicher Umfang von Vorwissen in die Analyse eingebracht werden - es lohnt sich auch zu untersuchen, wie sich ein unterscheidlicher Umfang von Vorwissen auf die Inferenz auswirkt.
+- **p-hacking** ist auch in bayesschen Analysen möglich, auch wenn diese keine p-Werte verwenden. Der Prior darf nicht auf Basis von Modellergebnissen angepasst werden, lediglich auf Basis von "pre-data knowledge"  
+- Interpretation der Posterior: Tabellen geben schon bei leicht komplexeren Modellen keinen guten Überblick über die Modellergebnisse. Posterior daher besser auch visualisieren
 
-Lesezeichen: 4.4 Linear Prediction
+Lesezeichen: 4.4.3 
 
 Practice
 https://sr2-solutions.wjakethompson.com/bayesian-inference
